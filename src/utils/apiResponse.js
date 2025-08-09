@@ -12,4 +12,20 @@ class apiResponse {
 }
 
 
-export { apiResponse } 
+export { apiResponse }
+
+
+
+
+// same work with function -->
+
+// const apiResponse = (statusCode, data, message = "Success") => {
+//     return {
+//         success: true,
+//         statusCode,
+//         data,
+//         message
+//     };
+// };
+
+// export { apiResponse };
