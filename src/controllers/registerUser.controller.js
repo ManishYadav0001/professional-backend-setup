@@ -2,11 +2,17 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiErrors.js";
 import { User } from "../models/user.model.js";
 import { uploadCloudinary } from "../utils/cloudinary.js";
+import { ApiResponse } from "../utils/apiResponse.js";
 
 const registerUser = asyncHandler(
 
+
+
     async (req, res) => {
 
+       
+
+       
 
         // step-1 - getting data from the frontend (json data not avatar or coverImage)
 
@@ -34,12 +40,12 @@ const registerUser = asyncHandler(
 
         //step-3-  checking if user already registered in the database or not
 
-        const existedUser = User.find({
+        const existedUser = await User.findOne({
             $or: [{ username }, { email }]
-        })
+        });
 
         if (existedUser) {
-            throw new ApiError(409, "user already existed")
+            throw new ApiError(409, "user already exists")
         }
 
 
@@ -47,7 +53,14 @@ const registerUser = asyncHandler(
         // step-4- check for image and check for avatar --
 
         const avatarLocalPath = req.files?.avatar[0]?.path;
-        const coverimageLocalPath = req.files?.coverimage[0]?.path;
+        // const coverimageLocalPath = req.files?.coverimage[0]?.path;
+
+        let coverimageLocalPath;
+        if (req.files && Array.isArray(req.files.coverimage) && req.files.coverimage.length > 0) {
+
+            coverimageLocalPath = req.files?.coverimage?.[0]?.path;
+        }
+
 
         if (!avatarLocalPath) {
             throw new ApiError(400, "avatar not found")
@@ -55,11 +68,12 @@ const registerUser = asyncHandler(
 
         //step-5- upload avatar and coverImage on cloudinary --
 
+
         const Avatar = await uploadCloudinary(avatarLocalPath)
 
         const Coverimage = await uploadCloudinary(coverimageLocalPath)
 
-        if (!uploadAvatar) {
+        if (!Avatar) {
             throw new ApiError(500, "can't upload avatar")
         }
 
@@ -78,7 +92,7 @@ const registerUser = asyncHandler(
 
         // step-7- remove password and referesh token field from the data -- 
 
-        const createdUser = User.findById(user._id).select(
+        const createdUser = await User.findById(user._id).select(
             "-password -refereshToken"
         )
 
@@ -92,7 +106,7 @@ const registerUser = asyncHandler(
 
         return res.status(201).json(
 
-            new apiResponse(201, createdUser, "user Registered Succesfully")
+            new ApiResponse(201, createdUser, "user Registered Succesfully")
 
         )
 
