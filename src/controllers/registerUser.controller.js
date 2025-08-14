@@ -218,7 +218,6 @@ const logOutUser = asyncHandler(
     }
 )
 
-
 const refreshAccessToken = asyncHandler(
 
     async (req, res) => {
@@ -341,13 +340,13 @@ const updateAccountDetails = asyncHandler(
 const updateUserAvatar = asyncHandler(
     async (req, res) => {
 
-  try {
+        try {
 
             const currentuserId = req.user._id;
 
             const currentUserAvatar = await User.findById(currentuserId).select("avatar");
 
-            if (!currentUserAvatar || !currentUserAvatar.avatar ) {
+            if (!currentUserAvatar || !currentUserAvatar.avatar) {
                 throw new ApiError(404, "current user avatar not found")
             }
 
@@ -356,7 +355,7 @@ const updateUserAvatar = asyncHandler(
             await cloudinary.uploader.destroy(publicId)
 
         } catch (error) {
-            throw new ApiError(500 ,  "Can't able to delete previous avatar image from cloudanary")
+            throw new ApiError(500, "Can't able to delete previous avatar image from cloudanary")
         }
 
 
@@ -384,7 +383,7 @@ const updateUserAvatar = asyncHandler(
         ).select("-password")
 
 
-      
+
         return res.status(200).json(
             new ApiResponse(200, user, "Avatar updated successfully")
         )
@@ -401,18 +400,18 @@ const updateUserCoverimage = asyncHandler(
             const currentUserCoverImage = await User.findById(req.user._id).select("coverimage")
 
 
-          if (!currentUserCoverImage || !currentUserCoverImage.coverimage) {
-            throw new ApiError(404, "current user coverimage not found");
-        }
+            if (!currentUserCoverImage || !currentUserCoverImage.coverimage) {
+                throw new ApiError(404, "current user coverimage not found");
+            }
 
             const publicId = currentUserCoverImage.coverimage.split("/").pop().split(".")[0];
 
             await cloudinary.uploader.destroy(publicId)
 
-            
+
         } catch (error) {
-            throw new ApiError(500 ,  "Can't able to delete previous coverImage image from cloudanary")
-            
+            throw new ApiError(500, "Can't able to delete previous coverImage image from cloudanary")
+
         }
 
 
@@ -445,6 +444,77 @@ const updateUserCoverimage = asyncHandler(
     }
 )
 
+const GettingChannelData = asyncHandler(
+    async (req, res) => {
+        const { username } = req.params;
+
+        if (!username) {
+            throw new ApiError(404, "can't fetch username")
+        }
+
+        const channel = await User.aggregate([
+            {
+                $match: {
+                    username: username?.toLowerCase()
+                }
+            },
+            {
+                $lookup: {
+                    from: "subscription",
+                    localField: "_id",
+                    foreignField: "channel",
+                    as: "subscribers"
+                }
+            },
+            {
+                $lookup: {
+                    from: "subscription",
+                    localField: "_id",
+                    foreignField: "subscriber",
+                    as: "subscribedTo"
+                }
+            },
+            {
+                $addFields: {
+                    subscriberCount: {
+                        $size: "$subscribers"
+                    },
+                    subscribedToCount: {
+                        $size: "$subscribedTo"
+                    },
+                    isSubscribed: {
+                        $cond: {
+                            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+                            then: true,
+                            else: false
+                        }
+                    }
+
+                }
+            }
+            ,
+            {
+                $project: {
+                    fullName: 1,
+                    username: 1,
+                    subscriberCount: 1,
+                    subscribedToCount: 1,
+                    isSubscribed: 1,
+                    avatar: 1,
+                    coverimage: 1,
+                    email: 1
+                }
+            }
+        ])
+        if (!channel?.length) {
+            throw new ApiError(404, "channel does not exists")
+        }
+
+        return res.status(200).
+            json(new ApiResponse(200, channel[0], "user channel fetched successfully"))
+    }
+)
+
 export {
     registerUser
     , loginUser
@@ -455,4 +525,5 @@ export {
     , updateAccountDetails
     , updateUserAvatar
     , updateUserCoverimage
+    , GettingChannelData
 }
