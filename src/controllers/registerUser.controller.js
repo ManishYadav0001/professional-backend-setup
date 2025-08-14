@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken";
+import { v2 as cloudinary } from "cloudinary";
 
 const generateAccessAndRefereshToken = async (userId) => {
 
@@ -339,7 +340,28 @@ const updateAccountDetails = asyncHandler(
 
 const updateUserAvatar = asyncHandler(
     async (req, res) => {
-        const avatarLocalPath = req.files?.avatar[0]?.path;
+
+  try {
+
+            const currentuserId = req.user._id;
+
+            const currentUserAvatar = await User.findById(currentuserId).select("avatar");
+
+            if (!currentUserAvatar || !currentUserAvatar.avatar ) {
+                throw new ApiError(404, "current user avatar not found")
+            }
+
+            const publicId = currentUserAvatar.avatar.split("/").pop().split(".")[0];
+
+            await cloudinary.uploader.destroy(publicId)
+
+        } catch (error) {
+            throw new ApiError(500 ,  "Can't able to delete previous avatar image from cloudanary")
+        }
+
+
+
+        const avatarLocalPath = req.files?.avatar?.[0]?.path;
 
         if (!avatarLocalPath) {
             throw new ApiError(400, "avatar not found")
@@ -361,6 +383,8 @@ const updateUserAvatar = asyncHandler(
             { new: true }
         ).select("-password")
 
+
+      
         return res.status(200).json(
             new ApiResponse(200, user, "Avatar updated successfully")
         )
@@ -370,7 +394,29 @@ const updateUserAvatar = asyncHandler(
 
 const updateUserCoverimage = asyncHandler(
     async (req, res) => {
-        const coverImageLocalPath = req.files?.coverimage[0]?.path;
+
+
+        try {
+
+            const currentUserCoverImage = await User.findById(req.user._id).select("coverimage")
+
+
+          if (!currentUserCoverImage || !currentUserCoverImage.coverimage) {
+            throw new ApiError(404, "current user coverimage not found");
+        }
+
+            const publicId = currentUserCoverImage.coverimage.split("/").pop().split(".")[0];
+
+            await cloudinary.uploader.destroy(publicId)
+
+            
+        } catch (error) {
+            throw new ApiError(500 ,  "Can't able to delete previous coverImage image from cloudanary")
+            
+        }
+
+
+        const coverImageLocalPath = req.files?.coverimage?.[0]?.path;
 
         if (!coverImageLocalPath) {
             throw new ApiError(400, "coverImage not found")
