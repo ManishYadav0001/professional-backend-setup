@@ -3,8 +3,7 @@ import { ApiError } from "../utils/apiErrors.js";
 import { User } from "../models/user.model.js";
 import { uploadCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/apiResponse.js";
-import jwt from "jsonwebtoken"
-import { application } from "express";
+import jwt from "jsonwebtoken";
 
 const generateAccessAndRefereshToken = async (userId) => {
 
@@ -115,7 +114,7 @@ const registerUser = asyncHandler(
         // step-7- remove password and referesh token field from the data -- 
 
         const createdUser = await User.findById(user._id).select(
-            "-password -refereshToken"
+            "-password -refreshToken"
         )
 
         // step-8- checking for user creation -- 
@@ -174,7 +173,7 @@ const loginUser = asyncHandler(
         return res
             .status(200)
             .cookie("accessToken", AccessToken, options)
-            .cookie("refereshToken", RefereshToken, options)
+            .cookie("refreshToken", RefereshToken, options)
             .json(
                 new ApiResponse(
                     200,
@@ -209,7 +208,7 @@ const logOutUser = asyncHandler(
         return res.
             status(200).
             clearCookie("accessToken", options).
-            clearCookie("refereshToken", options).
+            clearCookie("refreshToken", options).
             json(new ApiResponse(200, {}, "usser logged Out"))
 
 
@@ -240,7 +239,7 @@ const refreshAccessToken = asyncHandler(
             }
 
             if (incomingRefreshToken !== user?.refreshToken) {
-                throw new ApiError(401, "refereshToken is expired or used")
+                throw new ApiError(401, "refreshToken is expired or used")
             }
 
             const options = {
@@ -252,7 +251,7 @@ const refreshAccessToken = asyncHandler(
 
             return res.status(200).
                 cookie("accessToken", AccessToken, options).
-                cookie("refereshToken", RefereshToken, options)
+                cookie("refreshToken", RefereshToken, options)
                 .json(
                     new ApiResponse(200, { AccessToken, RefereshToken }, "Access token refereshed")
                 )
@@ -262,7 +261,6 @@ const refreshAccessToken = asyncHandler(
     }
 
 )
-
 
 const changeCurrentPassword = asyncHandler(
     async (req, res) => {
@@ -278,7 +276,7 @@ const changeCurrentPassword = asyncHandler(
 
         const userId = req.user._id;
 
-        const user = await User.findbyId(
+        const user = await User.findById(
             userId
         );
 
@@ -293,7 +291,7 @@ const changeCurrentPassword = asyncHandler(
         }
 
         user.password = newPassword;
-        await user.save({ validationBeforeSave: false })
+        await user.save({ validateBeforeSave: false })
 
         return res.status(200).json(
             new ApiResponse(200, {}, "Pasword changed successfully")
@@ -301,7 +299,6 @@ const changeCurrentPassword = asyncHandler(
 
     }
 )
-
 
 const getCurrentUser = asyncHandler(
     async (req, res) => {
@@ -358,7 +355,7 @@ const updateUserAvatar = asyncHandler(
             req.user._id,
             {
                 $set: {
-                    Avatar: Avatar?.url
+                    avatar: Avatar?.url
                 }
             },
             { new: true }
@@ -376,7 +373,7 @@ const updateUserCoverimage = asyncHandler(
         const coverImageLocalPath = req.files?.coverimage[0]?.path;
 
         if (!coverImageLocalPath) {
-            throw new ApiError(400, "avatar not found")
+            throw new ApiError(400, "coverImage not found")
         }
 
         const coverImage = await uploadCloudinary(coverImageLocalPath)
